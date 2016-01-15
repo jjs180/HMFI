@@ -1,7 +1,9 @@
 <?php
 //error_reporting(E_ALL);
-//ini_set('display_errors', 1);    
+//ini_set('display_errors', 1);
+date_default_timezone_set('America/Los_Angeles');
 require_once ('includes/sffunctions.php');
+
 
 //Data to use for Property Search
 $PropertyStreetAddress = ($_GET['streetnum'] . ' ' . substr($_GET['streetname'], 0, strrpos($_GET['streetname'], ' ')) ); //Strip suffix
@@ -42,61 +44,84 @@ else{    //No property found, execute RealtyTrac API pull
     $ZipCode = $_GET['zip'];
     
     //Send the JSON request
-    $jsonurl = 'http://dlpapi.realtytrac.com/Reports/Get?ApiKey='.$apikey.'&Login='.$login.'&Password='.$password.'&JobID=&LoanNumber=&PreparedBy=&ResellerID=&PreparedFor=&OwnerFirstName=&OwnerLastName=&AddressType=&PropertyStreetAddress='.$PropertyStreetAddress.'&AddressNumber='.$PropertyStreetNum.'&StartAddressNumberRange=&EndAddressNumberRange=&StreetDir=&StreetName='.$PropertyStreetName.'&StreetSuffix=&Unit='.$Unit.'&City='.$City.'&StateCode='.$StateCode.'&ZipCode='.$ZipCode.'&PropertyParcelID=&SAPropertyID=&APN=&ApnRangeStart=&ApnRangeEnd=&Latitude=&Longitude=&Radius=&SearchType=&NumberOfRecords=&Sort=&Format=JSON&ReportID=102';
+    $jsonurl = 'http://dlpapi.realtytrac.com/Reports/Get?ApiKey='.$apikey.'&Login='.$login.'&Password='.$password.'&JobID=&LoanNumber=&PreparedBy=&ResellerID=&PreparedFor=&OwnerFirstName=&OwnerLastName=&AddressType=&PropertyStreetAddress='.$PropertyStreetAddress.'&AddressNumber='.$PropertyStreetNum.'&StartAddressNumberRange=&EndAddressNumberRange=&StreetDir=&StreetName='.$PropertyStreetName.'&StreetSuffix=&Unit='.$Unit.'&City='.$City.'&StateCode='.$StateCode.'&ZipCode='.$ZipCode.'&PropertyParcelID=&SAPropertyID=&APN=&ApnRangeStart=&ApnRangeEnd=&Latitude=&Longitude=&Radius=&SearchType=&NumberOfRecords=&Sort=&Format=JSON&ReportID=102%2c103&R103_SettingsMode=';
     //echo $jsonurl;
     $response = file_get_contents($jsonurl);
     
     //Decode the response
     $responseData = json_decode($response, true);
+    $propertyArr = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"]; //Get property array. Simplify notation.
+    
     //echo "<pre>";
     //print_r($responseData);
     //echo "</pre>";
-    
+
     //Owner 1 response
-    $labelname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][0]["@_Name"];
-    $lastname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_LastName"];
-    $firstname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_FirstName"];
-    $middlename = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_MiddleName"];
+    $labelname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["@_Name"]));
+    $lastname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_LastName"]));
+    $firstname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_FirstName"]));
+    $middlename = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_MiddleName"]));
+    if ($lastname == '') { //If no lastname, make full name lastname so contact will be created in Salesforce i.e. for trusts.
+        $lastname = $labelname;
+        $firstname = ''; //Eliminate duplication of first name and last name if no last name.
+    }
     
     //Owner 2 response
-    $labelname2 = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][1]["@_Name"];
-    $lastname2 = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_LastName"];
-    $firstname2 = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_FirstName"];
-    $middlename2 = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_MiddleName"];
+    $labelname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["@_Name"]));
+    $lastname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_LastName"]));
+    $firstname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_FirstName"]));
+    $middlename2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_MiddleName"]));
     
     //Property address information response    
-    $propertyhousenum = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["PARSED_STREET_ADDRESS"]["@_HouseNumber"];
-    $propertystreetname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["PARSED_STREET_ADDRESS"]["@_StreetName"];
-    $propertystreetnamesuffix = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["PARSED_STREET_ADDRESS"]["@_StreetSuffix"];
-    $propertyunitnum = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["PARSED_STREET_ADDRESS"]["@_ApartmentOrUnit"];
-    $propertycity = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["@_City"];
-    $propertystate = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["@_State"];
-    $propertyzipcode = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["@_PostalCode"];
-    $propertyzip4 = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["PARSED_STREET_ADDRESS"]["@PlusFourPostalCode"];
+    $propertyhousenum = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_HouseNumber"];
+    $propertystreetname = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_StreetName"];
+    $propertystreetnamesuffix = ucwords(strtolower($propertyArr[0]["PARSED_STREET_ADDRESS"]["@_StreetSuffix"]));
+    $propertyunitnum = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_ApartmentOrUnit"];
+    $propertycity = $propertyArr[0]["@_City"];
+    $propertystate = $propertyArr[0]["@_State"];
+    $propertyzipcode = $propertyArr[0]["@_PostalCode"];
+    $propertyzip4 = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@PlusFourPostalCode"];
     $propertyzipzip4 = $propertyzipcode.'-'.$propertyzip4;
-    $county = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_IDENTIFICATION"]["@CountyFIPSName_ext"];
+    $county = $propertyArr[0]["_IDENTIFICATION"]["@CountyFIPSName_ext"];
     
     //Mortgage information response
-    $loantype = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["LOAN_ext"][0]["@_AmortizationDescription_ext"];
-    $loanamt = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["LOAN_ext"][0]["@_Amount"];
-    $loandate = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["@PropertySalesDate"]; //Note loan date is assumed to be sales date
-    $loangroup = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["LOAN_ext"][0]["@MortgageType"];
-    $propertytype = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["@StandardUseDescription_ext"];
-    $lenderfirstname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["LOAN_ext"][0]["@LenderFirstName"];
-    $lenderlastname = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["LOAN_ext"][0]["@LenderLastName"];
-    $lendername = $lenderfirstname.' '.$lenderlastname;
-    $maturitydate = date('Y-m-d', strtotime($loandate . ' +30 years'));
+    foreach ($propertyArr as $element) { //Loop JSON decoded array
+        $loanType = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Type"];
+        $equityLine = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_EquityLineOfCreditIndicator"];
+        if ($loanType == 'First' and $equityLine == 0) { //Check if loan is first and equity line is false
+            
+            //Get mortgage information response for first mortgage that is not an equity line
+            $loanDescription = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_AmortizationDescription_ext"];
+            $loanamt = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Amount"];
+            $loandate = $element["SALES_HISTORY"]["@TransferDate_ext"];
+            $loangroup = $element["SALES_HISTORY"]["LOAN_ext"][1]["@MortgageType"];
+            $propertytype = $propertyArr[0]["@StandardUseDescription_ext"];
+            $lenderfirstname = ucwords(strtolower($element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderFirstName"]));
+            $lenderlastname = ucwords(strtolower($element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderLastName"]));
+            $lendername = $lenderfirstname.' '.$lenderlastname;
+            
+            //Fix accessing loan maturity dates in PHP beyond 2038
+            $loandate = date('Y-m-d', strtotime($loandate));
+            $maturitydate = new DateTime($loandate);
+            $interval = new DateInterval('P30Y'); //Assume 30-year loan
+            $maturitydate->add($interval);
+            $maturitydate = $maturitydate->format('Y-m-d')."\n";
+            
+            //Stop loop at first instance of first mortgage that is not an equity line
+            break; 
+        }   
+    }
     
     //Other property information
-    $saleprice = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["SALES_HISTORY"]["@PropertySalesAmount"];
-    $parcelid = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_IDENTIFICATION"]["@AssessorsParcelIdentifier"];
-    $assessedvalue = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_TAX"]["@_TotalAssessedValueAmount"];
-    $propertytaxamt = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["_TAX"]["@_TotalTaxAmount"];
-    $yearbuilt = $responseData["RESPONSE_GROUP"]["RESPONSE"]["RESPONSE_DATA"]["PROPERTY_INFORMATION_RESPONSE_ext"]["SUBJECT_PROPERTY_ext"]["PROPERTY"][0]["STRUCTURE"]["STRUCTURE_ANALYSIS"]["@PropertyStructureBuiltYear"];
+    $saleprice = $propertyArr[0]["SALES_HISTORY"]["@PropertySalesAmount"];
+    $parcelid = $propertyArr[0]["_IDENTIFICATION"]["@AssessorsParcelIdentifier"];
+    $assessedvalue = $propertyArr[0]["_TAX"]["@_TotalAssessedValueAmount"];
+    $propertytaxamt = $propertyArr[0]["_TAX"]["@_TotalTaxAmount"];
+    $yearbuilt = $propertyArr[0]["STRUCTURE"]["STRUCTURE_ANALYSIS"]["@PropertyStructureBuiltYear"];
     
     //Defaults for empty fields
     IF($loangroup ==''){
-        $loangroup = 'CONV';
+        $loangroup = 'Conventional';
     }
     
     //Print
@@ -113,7 +138,7 @@ else{    //No property found, execute RealtyTrac API pull
     echo 'STATE: '.$propertystate.'<br/>';
     echo 'ZIP: '.$propertyzipzip4.'<br/>';
     echo 'COUNTY: '.$county.'<br/>';
-    echo 'LOAN TYPE: '.$loantype.'<br/>';
+    echo 'LOAN TYPE: '.$loanDescription.'<br/>';
     echo 'LOAN AMOUNT: '.$loanamt.'<br/>';
     echo 'LOAN DATE: '.$loandate.'<br/>';
     echo 'LOAN GROUP: '.$loangroup.'<br/>';
@@ -128,6 +153,8 @@ else{    //No property found, execute RealtyTrac API pull
     echo 'ASSESSED VALUE: '.$assessedvalue.'<br/>';
     echo 'YEAR BUILT: '.$yearbuilt.'<br/>';
     */
+    //Breakpoint before doing Salesforce stuff
+    //die();
     
     //Create Salesforce Account
     $sObject = new stdclass();
