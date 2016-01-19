@@ -63,7 +63,7 @@ else{    //No property found, execute RealtyTrac API pull
         return $propername;
     }
     
-    print_debug($propertyArr[0]);
+    //print_debug($propertyArr[0]);
     //Owner 1 response
     $labelname = $propertyArr[0]["_OWNER"][0]["@_Name"];
     $nameArray = explode(',', $labelname, 2);
@@ -138,7 +138,7 @@ else{    //No property found, execute RealtyTrac API pull
     }
     
     //Print
-    
+    /*
     echo 'FULL NAME: '.$labelname.'<br/>';
     echo 'LAST NAME: '.$lastname.'<br/>';
     echo 'FIRST NAME: '.$firstname.'<br/>';
@@ -166,9 +166,9 @@ else{    //No property found, execute RealtyTrac API pull
     echo 'PROPERTY TAX AMOUNT: '.$propertytaxamt.'<br/>';
     echo 'ASSESSED VALUE: '.$assessedvalue.'<br/>';
     echo 'YEAR BUILT: '.$yearbuilt.'<br/>';
-    
-    //Die before doing Salesforce stuff
-    die();
+    */
+    //Breakpoint before doing Salesforce stuff
+    //die();
     
     //Create Salesforce Account
     $sObject = new stdclass();
