@@ -6,7 +6,7 @@ require_once ('includes/sffunctions.php');
 
 
 //Data to use for Property Search
-$PropertyStreetAddress = ($_GET['streetnum'] . ' ' . substr($_GET['streetname'], 0, strrpos($_GET['streetname'], ' ')) ); //Strip suffix
+$PropertyStreetAddress = ($_GET['streetnum'] . ' ' . substr($_GET['streetname'], 0, strrpos($_GET['streetname'], ' ')) );   //Strip suffix
 $Unit = ($_GET['unit']);
 $City = ($_GET['city']);
 $StateCode = $_GET['state'];
@@ -14,7 +14,7 @@ $ZipCode = $_GET['zip'];
 
 $searchResult = SFSearchPropertyFastQuote(null, $PropertyStreetAddress, $Unit, $City, $StateCode, $ZipCode );
 
-if( $searchResult != false){ //Property in SF Found
+if( $searchResult != false){    //Property in SF Found
     
     $FQID = $searchResult['FQID'];
     $FQZIP = $searchResult['FQZIP'];
@@ -44,8 +44,7 @@ else{    //No property found, execute RealtyTrac API pull
     $ZipCode = $_GET['zip'];
     
     //Send the JSON request
-    $jsonurl = 'http://dlpapi.realtytrac.com/Reports/Get?ApiKey='.$apikey.'&Login='.$login.'&Password='.$password.'&JobID=&LoanNumber=&PreparedBy=&ResellerID=&PreparedFor=&OwnerFirstName=&OwnerLastName=&AddressType=&PropertyStreetAddress='.$PropertyStreetAddress.'&AddressNumber='.$PropertyStreetNum.'&StartAddressNumberRange=&EndAddressNumberRange=&StreetDir=&StreetName='.$PropertyStreetName.'&StreetSuffix=&Unit='.$Unit.'&City='.$City.'&StateCode='.$StateCode.'&ZipCode='.$ZipCode.'&PropertyParcelID=&SAPropertyID=&APN=&ApnRangeStart=&ApnRangeEnd=&Latitude=&Longitude=&Radius=&SearchType=&NumberOfRecords=&Sort=&Format=JSON&ReportID=102%2c103&R103_SettingsMode=';
-    //echo $jsonurl;
+    $jsonurl = 'http://dlpapi.realtytrac.com/Reports/Get?ApiKey='.$apikey.'&Login='.$login.'&Password='.$password.'&JobID=&LoanNumber=&PreparedBy=&ResellerID=&PreparedFor=&OwnerFirstName=&OwnerLastName=&AddressType=&PropertyStreetAddress='.$PropertyStreetAddress.'&AddressNumber='.$PropertyStreetNum.'&StartAddressNumberRange=&EndAddressNumberRange=&StreetDir=&StreetName='.$PropertyStreetName.'&StreetSuffix=&Unit='.$Unit.'&City='.$City.'&StateCode='.$StateCode.'&ZipCode='.$ZipCode.'&PropertyParcelID=&SAPropertyID=&APN=&ApnRangeStart=&ApnRangeEnd=&Latitude=&Longitude=&Radius=&SearchType=&NumberOfRecords=&Sort=&Format=JSON&ReportID=103%2c106&R103_SettingsMode=';
     $response = file_get_contents($jsonurl);
     
     //Decode the response
@@ -55,55 +54,67 @@ else{    //No property found, execute RealtyTrac API pull
     //echo "<pre>";
     //print_r($responseData);
     //echo "</pre>";
-
+    
+    //Function to check uppercase and if not all uppercase, uppercase first letter of proper names
+    function properCase($propername) {
+        //if (ctype_upper($propername)) {
+            $propername = ucwords(strtolower($propername));
+        //}
+        return $propername;
+    }
+    
+    print_debug($propertyArr[0]);
     //Owner 1 response
-    $labelname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["@_Name"]));
-    $lastname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_LastName"]));
-    $firstname = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_FirstName"]));
-    $middlename = ucwords(strtolower($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_MiddleName"]));
-    if ($lastname == '') { //If no lastname, make full name lastname so contact will be created in Salesforce i.e. for trusts.
-        $lastname = $labelname;
-        $firstname = ''; //Eliminate duplication of first name and last name if no last name.
+    $labelname = $propertyArr[0]["_OWNER"][0]["@_Name"];
+    $nameArray = explode(',', $labelname, 2);
+    $lastname = properCase($nameArray[0]);
+    $nameArray2 = explode(' ', $nameArray[1], 2);
+    $firstname = properCase($nameArray2[0]);
+    if(isset($nameArray2[1])) { $middlename = properCase($nameArray2[1]); }
+    
+    //Parsed names not available with Basic Profile report
+    //$lastname = properCase($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_LastName"]);
+    //$firstname = properCase($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_FirstName"]);
+    //$middlename = properCase($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_MiddleName"]);
+    if ($lastname == '') {  //If no lastname, make full name lastname so contact will be created in Salesforce i.e. for trusts.
+        $lastname = properCase($labelname);
+        $firstname = '';    //Eliminate duplication of first name and last name if no last name.
     }
     
     //Owner 2 response
-    $labelname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["@_Name"]));
-    $lastname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_LastName"]));
-    $firstname2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_FirstName"]));
-    $middlename2 = ucwords(strtolower($propertyArr[0]["_OWNER"][1]["_PARSED_NAME_ext"]["@_MiddleName"]));
+    $labelname2 = properCase($propertyArr[0]["_OWNER"][1]["@_Name"]);
+    $nameArray = explode(',', $labelname2, 2);
+    $lastname2 = properCase($nameArray[0]);
+    $nameArray2 = explode(' ', $nameArray[1], 2);
+    $firstname2 = properCase($nameArray2[0]);
+    if(isset($nameArray2[1])) { $middlename2 = properCase($nameArray2[1]); }
     
-    //Property address information response    
-    $propertyhousenum = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_HouseNumber"];
-    $propertystreetname = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_StreetName"];
-    $propertystreetnamesuffix = ucwords(strtolower($propertyArr[0]["PARSED_STREET_ADDRESS"]["@_StreetSuffix"]));
-    $propertyunitnum = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@_ApartmentOrUnit"];
+    //Property address information response
+    $propertyStreetAddress = $propertyArr[0]["@_StreetAddress"];
     $propertycity = $propertyArr[0]["@_City"];
     $propertystate = $propertyArr[0]["@_State"];
     $propertyzipcode = $propertyArr[0]["@_PostalCode"];
-    $propertyzip4 = $propertyArr[0]["PARSED_STREET_ADDRESS"]["@PlusFourPostalCode"];
-    $propertyzipzip4 = $propertyzipcode.'-'.$propertyzip4;
-    $county = $propertyArr[0]["_IDENTIFICATION"]["@CountyFIPSName_ext"];
+    $county = properCase($propertyArr[0]["_IDENTIFICATION"]["@CountyFIPSName_ext"]);
     
     //Mortgage information response
-    foreach ($propertyArr as $element) { //Loop JSON decoded array
+    foreach ($propertyArr as $element) {    //Loop JSON decoded array
         $loanType = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Type"];
         $equityLine = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_EquityLineOfCreditIndicator"];
-        if ($loanType == 'First' and $equityLine == 0) { //Check if loan is first and equity line is false
+        if ($loanType == 'First' and $equityLine == 0) {    //Check if loan is first and equity line is false
             
             //Get mortgage information response for first mortgage that is not an equity line
             $loanDescription = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_AmortizationDescription_ext"];
             $loanamt = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Amount"];
             $loandate = $element["SALES_HISTORY"]["@TransferDate_ext"];
             $loangroup = $element["SALES_HISTORY"]["LOAN_ext"][1]["@MortgageType"];
-            $propertytype = $propertyArr[0]["@StandardUseDescription_ext"];
-            $lenderfirstname = ucwords(strtolower($element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderFirstName"]));
-            $lenderlastname = ucwords(strtolower($element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderLastName"]));
+            $lenderfirstname = $element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderFirstName"];
+            $lenderlastname = $element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderLastName"];
             $lendername = $lenderfirstname.' '.$lenderlastname;
             
             //Fix accessing loan maturity dates in PHP beyond 2038
             $loandate = date('Y-m-d', strtotime($loandate));
             $maturitydate = new DateTime($loandate);
-            $interval = new DateInterval('P30Y'); //Assume 30-year loan
+            $interval = new DateInterval('P30Y');   //Assume 30-year loan
             $maturitydate->add($interval);
             $maturitydate = $maturitydate->format('Y-m-d')."\n";
             
@@ -113,30 +124,33 @@ else{    //No property found, execute RealtyTrac API pull
     }
     
     //Other property information
-    $saleprice = $propertyArr[0]["SALES_HISTORY"]["@PropertySalesAmount"];
-    $parcelid = $propertyArr[0]["_IDENTIFICATION"]["@AssessorsParcelIdentifier"];
-    $assessedvalue = $propertyArr[0]["_TAX"]["@_TotalAssessedValueAmount"];
-    $propertytaxamt = $propertyArr[0]["_TAX"]["@_TotalTaxAmount"];
-    $yearbuilt = $propertyArr[0]["STRUCTURE"]["STRUCTURE_ANALYSIS"]["@PropertyStructureBuiltYear"];
+    $countPropertyArr = count($propertyArr) - 1;    //Count elements in $propertArr to find Basic Profile Report at the end
+    $propertytype = $propertyArr[$countPropertyArr]["@StandardUseDescription_ext"];
+    $saleprice = $propertyArr[$countPropertyArr]["SALES_HISTORY"]["@PropertySalesAmount"];
+    $parcelid = $propertyArr[$countPropertyArr]["_IDENTIFICATION"]["@AssessorsParcelIdentifier"];
+    $assessedvalue = $propertyArr[$countPropertyArr]["_TAX"]["@_TotalAssessedValueAmount"];
+    $propertytaxamt = $propertyArr[$countPropertyArr]["_TAX"]["@_TotalTaxAmount"];
+    $yearbuilt = $propertyArr[$countPropertyArr]["STRUCTURE"]["STRUCTURE_ANALYSIS"]["@PropertyStructureBuiltYear"];
     
     //Defaults for empty fields
     IF($loangroup ==''){
-        $loangroup = 'Conventional';
+        $loangroup = 'CONV';
     }
     
     //Print
-    /*
+    
     echo 'FULL NAME: '.$labelname.'<br/>';
     echo 'LAST NAME: '.$lastname.'<br/>';
     echo 'FIRST NAME: '.$firstname.'<br/>';
     echo 'MIDDLE NAME: '.$middlename.'<br/>';
-    echo 'HOUSE NUMBER: '.$propertyhousenum.'<br/>';
-    echo 'STREET NAME: '.$propertystreetname.'<br/>';
-    echo 'UNIT: '.$propertyunitnum.'<br/>';
-    echo 'STREET NAME SUFFIX: '.$propertystreetnamesuffix.'<br/>';
+    echo 'FULL NAME 2:'.$labelname2.'<br/>';
+    echo 'LAST NAME 2:'.$lastname2.'<br/>';
+    echo 'FIRST NAME 2:'.$firstname2.'<br/>';
+    echo 'MIDDLE NAME 2:'.$middlename2.'<br/>';
+    echo 'STREET ADDRESS: '.$propertyStreetAddress.'<br/>';
     echo 'CITY: '.$propertycity.'<br/>';
     echo 'STATE: '.$propertystate.'<br/>';
-    echo 'ZIP: '.$propertyzipzip4.'<br/>';
+    echo 'ZIP: '.$propertyzipcode.'<br/>';
     echo 'COUNTY: '.$county.'<br/>';
     echo 'LOAN TYPE: '.$loanDescription.'<br/>';
     echo 'LOAN AMOUNT: '.$loanamt.'<br/>';
@@ -152,9 +166,9 @@ else{    //No property found, execute RealtyTrac API pull
     echo 'PROPERTY TAX AMOUNT: '.$propertytaxamt.'<br/>';
     echo 'ASSESSED VALUE: '.$assessedvalue.'<br/>';
     echo 'YEAR BUILT: '.$yearbuilt.'<br/>';
-    */
-    //Breakpoint before doing Salesforce stuff
-    //die();
+    
+    //Die before doing Salesforce stuff
+    die();
     
     //Create Salesforce Account
     $sObject = new stdclass();
@@ -182,15 +196,10 @@ else{    //No property found, execute RealtyTrac API pull
     
     $sObject->County__c = $county;
     
-    $propertyStreetAddress = $propertyhousenum . ' ' . $propertystreetname . ' ' . $propertystreetnamesuffix;
-    if($propertyunitnum != ''){
-        $propertyStreetAddress .=  ' #' .  $propertyunitnum;
-    }
     $sObject->BillingStreet = $propertyStreetAddress;
     $sObject->BillingCity = $propertycity;
     $sObject->BillingState = $propertystate;
     $sObject->BillingPostalCode = $propertyzipcode;
-    $sObject->Zip_Plus_4__c = $propertyzip4;
     
     $sObjectArray = array($sObject);
     //print_debug($sObjectArray);
@@ -211,11 +220,10 @@ else{    //No property found, execute RealtyTrac API pull
         $sObject->MailingCity = $propertycity;
         $sObject->MailingState = $propertystate;
         $sObject->MailingPostalCode = $propertyzipcode;
-        $sObject->Zip_4__c = $propertyzip4;
         
         $sObjectArray = array($sObject);
         
-        if( $lastname2 != ''){ //Add co-owner/co-borrower
+        if( $lastname2 != ''){  //Add co-owner/co-borrower
             $sObject = new stdclass();
             $sObject->AccountId = $acctID;
             $sObject->FirstName = $firstname2;
@@ -224,7 +232,6 @@ else{    //No property found, execute RealtyTrac API pull
             $sObject->MailingCity = $propertycity;
             $sObject->MailingState = $propertystate;
             $sObject->MailingPostalCode = $propertyzipcode;
-            $sObject->Zip_4__c = $propertyzip4;
             
             $sObjectArray[] = $sObject;
         }
