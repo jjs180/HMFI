@@ -35,6 +35,7 @@ else{    //No property found, execute RealtyTrac API pull
     $PropertyStreetNum = urlencode($_GET['streetnum']);
     $PropertyStreetName = urlencode($_GET['streetname']);
     $PropertyStreetAddress = urlencode($_GET['streetnum'] . ' ' . $_GET['streetname']);
+    $PropertyStreetAddress_sf = $_GET['streetnum'] . ' ' . $_GET['streetname'];
     if( $_GET['unit'] != ''){
         $PropertyStreetAddress .= urlencode(' #'.$_GET['unit']);
     }
@@ -64,14 +65,32 @@ else{    //No property found, execute RealtyTrac API pull
     }
     
     //print_debug($propertyArr[0]);
-    //Owner 1 response
+    //Primary Owner response
     $labelname = $propertyArr[0]["_OWNER"][0]["@_Name"];
     $nameArray = explode(',', $labelname, 2);
     $lastname = properCase($nameArray[0]);
     $nameArray2 = explode(' ', $nameArray[1], 2);
     $firstname = properCase($nameArray2[0]);
     if(isset($nameArray2[1])) { $middlename = properCase($nameArray2[1]); }
-    
+
+    if(strpos($middlename, '&')){
+        $nameArray = explode('&', $middlename, 2);
+        $middlename = $nameArray[0];
+        $labelname2 = trim($nameArray[1]);
+        $lastname2 = $lastname;
+        $nameArray2 = explode(' ', $labelname2, 2);
+        $firstname2 = properCase($nameArray2[0]);
+        if(isset($nameArray2[1])) { $middlename2 = properCase($nameArray2[1]); }        
+    }
+    //Secondary Owner response
+    if(!empty($propertyArr[0]["_OWNER"][1]["@_Name"])){
+        $labelname3 = properCase($propertyArr[0]["_OWNER"][1]["@_Name"]);
+        $nameArray = explode(',', $labelname3, 2);
+        $lastname3 = properCase($nameArray[0]);
+        $nameArray2 = explode(' ', $nameArray[1], 2);
+        $firstname3 = properCase($nameArray2[0]);
+        if(isset($nameArray2[1])) { $middlename3 = properCase($nameArray2[1]); }
+    }
     //Parsed names not available with Basic Profile report
     //$lastname = properCase($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_LastName"]);
     //$firstname = properCase($propertyArr[0]["_OWNER"][0]["_PARSED_NAME_ext"]["@_FirstName"]);
@@ -81,13 +100,6 @@ else{    //No property found, execute RealtyTrac API pull
         $firstname = '';    //Eliminate duplication of first name and last name if no last name.
     }
     
-    //Owner 2 response
-    $labelname2 = properCase($propertyArr[0]["_OWNER"][1]["@_Name"]);
-    $nameArray = explode(',', $labelname2, 2);
-    $lastname2 = properCase($nameArray[0]);
-    $nameArray2 = explode(' ', $nameArray[1], 2);
-    $firstname2 = properCase($nameArray2[0]);
-    if(isset($nameArray2[1])) { $middlename2 = properCase($nameArray2[1]); }
     
     //Property address information response
     $propertyStreetAddress = $propertyArr[0]["@_StreetAddress"];
@@ -134,7 +146,7 @@ else{    //No property found, execute RealtyTrac API pull
     
     //Defaults for empty fields
     IF($loangroup ==''){
-        $loangroup = 'CONV';
+        $loangroup = 'Conv';
     }
     
     //Print
@@ -147,6 +159,10 @@ else{    //No property found, execute RealtyTrac API pull
     echo 'LAST NAME 2:'.$lastname2.'<br/>';
     echo 'FIRST NAME 2:'.$firstname2.'<br/>';
     echo 'MIDDLE NAME 2:'.$middlename2.'<br/>';
+    echo 'FULL NAME 3:'.$labelname3.'<br/>';
+    echo 'LAST NAME 3:'.$lastname3.'<br/>';
+    echo 'FIRST NAME 3:'.$firstname3.'<br/>';
+    echo 'MIDDLE NAME 3:'.$middlename3.'<br/>';
     echo 'STREET ADDRESS: '.$propertyStreetAddress.'<br/>';
     echo 'CITY: '.$propertycity.'<br/>';
     echo 'STATE: '.$propertystate.'<br/>';
@@ -188,15 +204,16 @@ else{    //No property found, execute RealtyTrac API pull
     IF ( !empty($loandate) ){
         $sObject->Loan_Start_Date__c = $loandate;
     }
+	 IF ( !empty($loandate) ){
+        $sObject->Loan_Maturity_Date__c = $maturitydate;
+    }
     $sObject->Loan_Group__c = $loangroup;
     $sObject->Assessed_Value__c = $assessedvalue;
     $sObject->Year_Home_Built__c = $yearbuilt;
-    $sObject->Loan_Maturity_Date__c = $maturitydate;
-    $sObject->Parcel_Number__c = $parcelid;
-    
-    $sObject->County__c = $county;
-    
-    $sObject->BillingStreet = $propertyStreetAddress;
+    $sObject->Parcel_Number__c = $parcelid;    
+    $sObject->County__c = $county;    
+    //$sObject->BillingStreet = $propertyStreetAddress;
+    $sObject->BillingStreet = $PropertyStreetAddress_sf;
     $sObject->BillingCity = $propertycity;
     $sObject->BillingState = $propertystate;
     $sObject->BillingPostalCode = $propertyzipcode;
@@ -214,9 +231,13 @@ else{    //No property found, execute RealtyTrac API pull
         $sObject = new stdclass();
         $sObject->AccountId = $acctID;
         $sObject->FirstName = $firstname;
+        if(!empty($middlename)){
+            $sObject->Middle_Initial__c = substr($middlename,0,1);
+        }
         $sObject->LastName = $lastname;
         $sObject->Primary__c = 'TRUE';
-        $sObject->MailingStreet = $propertyStreetAddress;
+        //$sObject->MailingStreet = $propertyStreetAddress;
+        $sObject->MailingStreet = $PropertyStreetAddress_sf;
         $sObject->MailingCity = $propertycity;
         $sObject->MailingState = $propertystate;
         $sObject->MailingPostalCode = $propertyzipcode;
@@ -227,8 +248,29 @@ else{    //No property found, execute RealtyTrac API pull
             $sObject = new stdclass();
             $sObject->AccountId = $acctID;
             $sObject->FirstName = $firstname2;
+            if(!empty($middlename2)){
+                $sObject->Middle_Initial__c = substr($middlename2,0,1);
+            }
             $sObject->LastName = $lastname2;
-            $sObject->MailingStreet = $propertyStreetAddress;
+            //$sObject->MailingStreet = $propertyStreetAddress;
+            $sObject->MailingStreet = $PropertyStreetAddress_sf;
+            $sObject->MailingCity = $propertycity;
+            $sObject->MailingState = $propertystate;
+            $sObject->MailingPostalCode = $propertyzipcode;
+            
+            $sObjectArray[] = $sObject;
+        }
+
+        if( $lastname2 != ''){  //Add secondary owner
+            $sObject = new stdclass();
+            $sObject->AccountId = $acctID;
+            $sObject->FirstName = $firstname3;
+            if(!empty($middlename3)){
+                $sObject->Middle_Initial__c = substr($middlename3,0,1);
+            }
+            $sObject->LastName = $lastname3;
+            //$sObject->MailingStreet = $propertyStreetAddress;
+            $sObject->MailingStreet = $PropertyStreetAddress_sf;
             $sObject->MailingCity = $propertycity;
             $sObject->MailingState = $propertystate;
             $sObject->MailingPostalCode = $propertyzipcode;
@@ -244,7 +286,8 @@ else{    //No property found, execute RealtyTrac API pull
         setcookie("fastquoteid", $FQID, time() + 298500);
         setcookie("fastquotezip", $FQZIP, time() + 298500); //Fix for existing cookie override issue
     
-        header("Location: ratequote.php?fastquoteid=$FQID&fastquotezip=$FQZIP");
+        header("Location: rate-quote.php");
+//        header("Location: rate-quote.php?fastquoteid=$FQID&fastquotezip=$FQZIP");
         
     }
     else{
