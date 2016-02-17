@@ -110,17 +110,17 @@ else{    //No property found, execute RealtyTrac API pull
     
     //Mortgage information response
     foreach ($propertyArr as $element) {    //Loop JSON decoded array
-        $loanType = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Type"];
-        $equityLine = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_EquityLineOfCreditIndicator"];
+        $loanType = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_Type"];
+        $equityLine = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_EquityLineOfCreditIndicator"];
         if ($loanType == 'First' and $equityLine == 0) {    //Check if loan is first and equity line is false
             
             //Get mortgage information response for first mortgage that is not an equity line
-            $loanDescription = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_AmortizationDescription_ext"];
-            $loanamt = $element["SALES_HISTORY"]["LOAN_ext"][1]["@_Amount"];
+            $loanDescription = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_AmortizationDescription_ext"];
+            $loanamt = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_Amount"];
             $loandate = $element["SALES_HISTORY"]["@TransferDate_ext"];
-            $loangroup = $element["SALES_HISTORY"]["LOAN_ext"][1]["@MortgageType"];
-            $lenderfirstname = $element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderFirstName"];
-            $lenderlastname = $element["SALES_HISTORY"]["LOAN_ext"][1]["@LenderLastName"];
+            $loangroup = $element["SALES_HISTORY"]["LOAN_ext"][0]["@MortgageType"];
+            $lenderfirstname = $element["SALES_HISTORY"]["LOAN_ext"][0]["@LenderFirstName"];
+            $lenderlastname = $element["SALES_HISTORY"]["LOAN_ext"][0]["@LenderLastName"];
             $lendername = $lenderfirstname.' '.$lenderlastname;
             
             //Fix accessing loan maturity dates in PHP beyond 2038
