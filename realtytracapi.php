@@ -112,7 +112,7 @@ else{    //No property found, execute RealtyTrac API pull
     foreach ($propertyArr as $element) {    //Loop JSON decoded array
         $loanType = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_Type"];
         $equityLine = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_EquityLineOfCreditIndicator"];
-        if ($loanType == 'First' and $equityLine == 0) {    //Check if loan is first and equity line is false
+        if ($loanType == 'First' and $equityLine == '0') {    //Check if loan is first and equity line is false
             
             //Get mortgage information response for first mortgage that is not an equity line
             $loanDescription = $element["SALES_HISTORY"]["LOAN_ext"][0]["@_AmortizationDescription_ext"];
